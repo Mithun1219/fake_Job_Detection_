@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
+  const location = useLocation();
+  const { isAuthenticated, role, logout } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -12,32 +16,95 @@ const Navbar = () => {
   }, []);
 
   return (
-    <nav style={{
-      ...styles.nav,
-      ...(scrolled ? styles.navScrolled : {})
-    }}>
-      <div style={styles.logoContainer}>
-        <div style={styles.logoIcon}>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="url(#gradient)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <defs>
-              <linearGradient id="gradient" x1="3" y1="3" x2="21" y2="21" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#6366f1"/>
-                <stop offset="1" stopColor="#06b6d4"/>
-              </linearGradient>
-            </defs>
-          </svg>
+    <>
+      <nav
+        style={{
+          ...styles.nav,
+          ...(scrolled ? styles.navScrolled : {}),
+        }}
+      >
+        <div style={styles.logoContainer}>
+          <div style={styles.logoIcon}>
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
+                stroke="url(#gradient)"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <defs>
+                <linearGradient
+                  id="gradient"
+                  x1="3"
+                  y1="3"
+                  x2="21"
+                  y2="21"
+                  gradientUnits="userSpaceOnUse"
+                >
+                  <stop stopColor="#6366f1" />
+                  <stop offset="1" stopColor="#06b6d4" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <h2 style={styles.logo}>JobCheck AI</h2>
         </div>
-        <h2 style={styles.logo}>JobCheck AI</h2>
-      </div>
-      <div style={styles.links}>
-        <a href="#home" style={styles.link}>Home</a>
-        <a href="#about" style={styles.link}>About</a>
-        <a href="#features" style={styles.link}>Features</a>
-        <a href="#dashboard" style={styles.link}>Dashboard</a>
-        <a href="#login" style={styles.button}>Get Started</a>
-      </div>
-    </nav>
+        <div style={styles.links}>
+          <NavLink to="/" label="Home" currentPath={location.pathname} />
+          <NavLink
+            to="/predict"
+            label="Predict"
+            currentPath={location.pathname}
+          />
+          {isAuthenticated && (
+            <NavLink
+              to="/history"
+              label="History"
+              currentPath={location.pathname}
+            />
+          )}
+          {role === "admin" && (
+            <NavLink
+              to="/admin"
+              label="Admin"
+              currentPath={location.pathname}
+            />
+          )}
+          {!isAuthenticated ? (
+            <Link to="/login" style={styles.button}>
+              Login
+            </Link>
+          ) : (
+            <button type="button" style={styles.buttonGhost} onClick={logout}>
+              Logout
+            </button>
+          )}
+        </div>
+      </nav>
+      <style>{hoverStyles}</style>
+    </>
+  );
+};
+
+const NavLink = ({ to, label, currentPath }) => {
+  const isActive = currentPath === to;
+  return (
+    <Link
+      to={to}
+      style={{
+        ...styles.link,
+        color: isActive ? "#f9fafb" : styles.link.color,
+      }}
+    >
+      {label}
+    </Link>
   );
 };
 
@@ -56,10 +123,10 @@ const styles = {
     background: "transparent",
   },
   navScrolled: {
-    background: "rgba(15, 23, 42, 0.8)",
-    backdropFilter: "blur(12px)",
-    WebkitBackdropFilter: "blur(12px)",
-    borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+    background: "rgba(15, 23, 42, 0.9)",
+    backdropFilter: "blur(14px)",
+    WebkitBackdropFilter: "blur(14px)",
+    borderBottom: "1px solid rgba(148, 163, 184, 0.2)",
     padding: "0.75rem 3rem",
   },
   logoContainer: {
@@ -84,7 +151,7 @@ const styles = {
   links: {
     display: "flex",
     alignItems: "center",
-    gap: "2rem",
+    gap: "1.75rem",
   },
   link: {
     textDecoration: "none",
@@ -97,20 +164,32 @@ const styles = {
   button: {
     background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
     padding: "0.625rem 1.5rem",
-    borderRadius: "8px",
+    borderRadius: "999px",
     textDecoration: "none",
     color: "white",
     fontWeight: 600,
     fontSize: "0.95rem",
     transition: "all 0.3s ease",
-    boxShadow: "0 4px 15px rgba(99, 102, 241, 0.3)",
+    boxShadow: "0 8px 30px rgba(79, 70, 229, 0.4)",
+    border: "none",
+    cursor: "pointer",
+  },
+  buttonGhost: {
+    padding: "0.5rem 1.25rem",
+    borderRadius: "999px",
+    background: "transparent",
+    border: "1px solid rgba(148, 163, 184, 0.6)",
+    color: "#e5e7eb",
+    fontWeight: 500,
+    fontSize: "0.9rem",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
   },
 };
 
-// Add hover styles using CSS-in-JS approach with style tag
 const hoverStyles = `
   nav a:hover {
-    color: #f8fafc !important;
+    color: #f9fafb !important;
   }
   nav a::after {
     content: '';
@@ -125,9 +204,8 @@ const hoverStyles = `
   nav a:hover::after {
     width: 100%;
   }
-  nav a[style*="button"]:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
+  button[style*="buttonGhost"]:hover {
+    background: rgba(15, 23, 42, 0.8);
   }
 `;
 
