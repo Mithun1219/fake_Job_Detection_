@@ -102,6 +102,29 @@
             font-size: 14px;
             opacity: 0.8;
         }
+
+        .fraud-bar {
+            width:300px;
+            background:#ddd;
+            border-radius:20px;
+            margin:15px auto;
+        }
+
+        .fraud-fill {
+            background:red;
+            color:white;
+            padding:6px;
+            border-radius:20px;
+        }
+
+        ul {
+            list-style:none;
+            padding:0;
+        }
+
+        li {
+            margin:5px 0;
+        }
     </style>
 </head>
 
@@ -118,11 +141,33 @@
     </form>
 
     {% if prediction %}
+
         <div class="result {% if prediction == 'Fake Job' %}fake{% else %}real{% endif %}">
             🔎 Prediction: {{ prediction }} <br>
             📊 Confidence: {{ confidence }}% <br>
             🚨 Risk Level: {{ risk }}
         </div>
+
+        <h3>Fraud Score</h3>
+
+        <div class="fraud-bar">
+            <div class="fraud-fill" style="width:{{fake_prob}}%;">
+                {{fake_prob}}%
+            </div>
+        </div>
+
+        {% if highlight_words %}
+
+        <h3>⚠ Suspicious Words Found</h3>
+
+        <ul>
+            {% for word in highlight_words %}
+            <li style="color:red;font-weight:bold;">{{ word }}</li>
+            {% endfor %}
+        </ul>
+
+        {% endif %}
+
     {% endif %}
 
     <div class="links">

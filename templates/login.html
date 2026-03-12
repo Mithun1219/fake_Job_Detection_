@@ -1,76 +1,205 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Admin Login - Fake Job Detection</title>
+<meta charset="UTF-8">
+<title>Fake Job Detector - Login</title>
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(to right, #4e73df, #1cc88a);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
+<style>
 
-        .login-box {
-            background: white;
-            padding: 40px;
-            width: 350px;
-            border-radius: 10px;
-            box-shadow: 0px 10px 25px rgba(0,0,0,0.2);
-            text-align: center;
-        }
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial, Helvetica, sans-serif;
+}
 
-        h2 {
-            margin-bottom: 20px;
-        }
+body{
+height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
+background: linear-gradient(-45deg,#667eea,#764ba2,#6dd5ed,#2193b0);
+background-size:400% 400%;
+animation:gradientBG 10s ease infinite;
+}
 
-        input {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-        }
+@keyframes gradientBG{
+0%{background-position:0% 50%;}
+50%{background-position:100% 50%;}
+100%{background-position:0% 50%;}
+}
 
-        button {
-            width: 100%;
-            padding: 10px;
-            background-color: #4e73df;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
+.container{
+background:rgba(255,255,255,0.15);
+backdrop-filter:blur(15px);
+padding:40px;
+border-radius:15px;
+width:360px;
+box-shadow:0 8px 32px rgba(0,0,0,0.2);
+color:white;
+animation:fadeIn 1s;
+}
 
-        button:hover {
-            background-color: #2e59d9;
-        }
+@keyframes fadeIn{
+from{opacity:0; transform:translateY(20px);}
+to{opacity:1; transform:translateY(0);}
+}
 
-        .error {
-            color: red;
-            margin-bottom: 10px;
-        }
-    </style>
+.logo{
+text-align:center;
+font-size:24px;
+font-weight:bold;
+margin-bottom:10px;
+}
+
+h2{
+text-align:center;
+margin-bottom:25px;
+}
+
+.input-group{
+margin-bottom:20px;
+}
+
+label{
+font-size:14px;
+}
+
+input{
+width:100%;
+padding:12px;
+margin-top:6px;
+border:none;
+border-radius:8px;
+outline:none;
+background:rgba(255,255,255,0.8);
+}
+
+button{
+width:100%;
+padding:12px;
+background:#4f6df5;
+border:none;
+color:white;
+font-size:16px;
+border-radius:8px;
+cursor:pointer;
+transition:0.3s;
+display:flex;
+justify-content:center;
+align-items:center;
+gap:8px;
+}
+
+button:hover{
+background:#3953d6;
+transform:scale(1.03);
+}
+
+button:disabled{
+opacity:0.7;
+cursor:not-allowed;
+}
+
+.spinner{
+width:18px;
+height:18px;
+border:3px solid white;
+border-top:3px solid transparent;
+border-radius:50%;
+animation:spin 1s linear infinite;
+display:none;
+}
+
+@keyframes spin{
+0%{transform:rotate(0deg);}
+100%{transform:rotate(360deg);}
+}
+
+.error{
+color:#ffdddd;
+text-align:center;
+margin-bottom:10px;
+font-weight:bold;
+}
+
+.show-password{
+margin-top:5px;
+font-size:12px;
+cursor:pointer;
+color:#eee;
+}
+
+</style>
+
+<script>
+
+function togglePassword(){
+let pass=document.getElementById("password");
+
+if(pass.type==="password"){
+pass.type="text";
+}else{
+pass.type="password";
+}
+}
+
+function showLoading(){
+
+let button=document.getElementById("loginButton");
+let spinner=document.getElementById("spinner");
+let text=document.getElementById("btnText");
+
+spinner.style.display="inline-block";
+text.innerText="Logging in...";
+button.disabled=true;
+
+}
+
+</script>
+
 </head>
 
 <body>
 
-<div class="login-box">
+<div class="container">
 
-    <h2>Admin Login</h2>
+<div class="logo">
+🤖 Fake Job Detector
+</div>
 
-    {% if error %}
-        <p class="error">{{ error }}</p>
-    {% endif %}
+<h2>Login</h2>
 
-    <form action="/login" method="post">
-        <input type="text" name="username" placeholder="Enter Username" required>
-        <input type="password" name="password" placeholder="Enter Password" required>
-        <button type="submit">Login</button>
-    </form>
+{% if error %}
+<div class="error">{{error}}</div>
+{% endif %}
+
+<form action="/login" method="post" onsubmit="showLoading()">
+
+<div class="input-group">
+<label>Username</label>
+<input type="text" name="username" placeholder="Enter username" required>
+</div>
+
+<div class="input-group">
+<label>Password</label>
+<input type="password" id="password" name="password" placeholder="Enter password" required>
+
+<div class="show-password" onclick="togglePassword()">
+👁 Show / Hide Password
+</div>
+
+</div>
+
+<button type="submit" id="loginButton">
+
+<span id="btnText">🔐 Login</span>
+
+<div class="spinner" id="spinner"></div>
+
+</button>
+
+</form>
 
 </div>
 

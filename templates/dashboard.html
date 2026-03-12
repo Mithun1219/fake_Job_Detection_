@@ -48,11 +48,29 @@
         .chart-container {
             width: 350px;
             height: 350px;
-            margin: 0 auto;
+            margin: 20px auto;
             background: white;
             padding: 20px;
             border-radius: 20px;
             box-shadow: 0px 6px 20px rgba(0,0,0,0.3);
+        }
+
+        table {
+            margin: 40px auto;
+            border-collapse: collapse;
+            width: 80%;
+            background: white;
+            color: black;
+        }
+
+        th, td {
+            padding: 12px;
+            border: 1px solid #ddd;
+        }
+
+        th {
+            background: #2a5298;
+            color: white;
         }
 
         .buttons {
@@ -81,59 +99,125 @@
 
 <body>
 
-    <h1>📊 Admin Dashboard</h1>
+<h1>📊 Admin Dashboard</h1>
 
-    <div class="cards">
-        <div class="card">
-            <h2>{{ total }}</h2>
-            <p>Total Predictions</p>
-        </div>
+<div class="cards">
 
-        <div class="card">
-            <h2>{{ fake }}</h2>
-            <p>Fake Jobs</p>
-        </div>
-
-        <div class="card">
-            <h2>{{ real }}</h2>
-            <p>Real Jobs</p>
-        </div>
+    <div class="card">
+        <h2>{{ total }}</h2>
+        <p>Total Predictions</p>
     </div>
 
-    <div class="chart-container">
-        <canvas id="myChart"></canvas>
+    <div class="card">
+        <h2>{{ fake }}</h2>
+        <p>Fake Jobs</p>
     </div>
 
-    <div class="buttons">
-        <a href="/download-logs" class="btn">⬇ Download Logs</a>
-        <a href="/logout" class="btn">🚪 Logout</a>
-        <a href="/" class="btn">🏠 Home</a>
+    <div class="card">
+        <h2>{{ real }}</h2>
+        <p>Real Jobs</p>
     </div>
 
-    <script>
-        const ctx = document.getElementById('myChart');
+</div>
 
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Fake Jobs', 'Real Jobs'],
-                datasets: [{
-                    data: [{{ fake }}, {{ real }}],
-                    backgroundColor: ['#ff4d4d', '#4CAF50']
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '70%',
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    }
-                }
-            }
-        });
-    </script>
+<!-- Prediction Chart -->
+<div class="chart-container">
+    <canvas id="myChart"></canvas>
+</div>
+
+<!-- Metrics Chart -->
+<div class="chart-container">
+    <canvas id="metricsChart"></canvas>
+</div>
+
+<h2>🚨 Recent Fake Job Posts</h2>
+
+<table>
+<tr>
+<th>ID</th>
+<th>Job Description</th>
+<th>Result</th>
+</tr>
+
+{% for post in flagged_posts %}
+<tr>
+<td>{{ post.id }}</td>
+<td>{{ post.job_text }}</td>
+<td>{{ post.result }}</td>
+</tr>
+{% endfor %}
+
+</table>
+
+<div class="buttons">
+    <a href="/download-logs" class="btn">⬇ Download Logs</a>
+    <a href="/retrain-model" class="btn">🔄 Retrain Model</a>
+    <a href="/logout" class="btn">🚪 Logout</a>
+    <a href="/" class="btn">🏠 Home</a>
+</div>
+
+<script>
+
+const ctx = document.getElementById('myChart');
+
+new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Fake Jobs', 'Real Jobs'],
+        datasets: [{
+            data: [{{ fake }}, {{ real }}],
+            backgroundColor: ['#ff4d4d', '#4CAF50']
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+
+</script>
+
+<script>
+
+fetch("/metrics")
+.then(response => response.json())
+.then(data => {
+
+const ctx = document.getElementById('metricsChart');
+
+new Chart(ctx, {
+type: 'bar',
+data: {
+labels: ['Accuracy', 'Precision', 'Recall', 'F1 Score'],
+datasets: [{
+label: 'Model Performance',
+data: [
+data.accuracy,
+data.precision,
+data.recall,
+data.f1_score
+],
+backgroundColor: [
+'#4CAF50',
+'#2196F3',
+'#FFC107',
+'#FF5722'
+]
+}]
+},
+options: {
+scales: {
+y: {
+beginAtZero: true,
+max: 1
+}
+}
+}
+});
+
+});
+
+</script>
 
 </body>
 </html>
