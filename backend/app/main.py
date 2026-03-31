@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
-from database import get_connection
+from app.database import get_connection
 from jose import JWTError, jwt
 import bcrypt
 import joblib

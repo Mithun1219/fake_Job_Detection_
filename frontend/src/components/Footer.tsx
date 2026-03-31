@@ -26,7 +26,7 @@ export function Footer() {
             <ul className="space-y-2 text-sm text-slate-500">
               <li><Link href="/predict" className="hover:text-indigo-600 transition-colors">Scan a Job</Link></li>
               <li><Link href="/history" className="hover:text-indigo-600 transition-colors">My History</Link></li>
-              <li><Link href="#" className="hover:text-indigo-600 transition-colors">API Documentation</Link></li>
+              <li><Link href="http://localhost:8000/docs" target="_blank" className="hover:text-indigo-600 transition-colors">API Documentation</Link></li>
             </ul>
           </div>
 
