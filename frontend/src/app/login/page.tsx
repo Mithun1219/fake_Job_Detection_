@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 import Link from "next/link";
-import { ShieldCheck, Loader2, Mail, Lock, AlertTriangle, Eye, EyeOff } from "lucide-react";
+import { ShieldCheck, Loader2, Mail, Lock, AlertTriangle, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 /* ── Animated network dots canvas ── */
@@ -121,6 +121,13 @@ export default function Login() {
 
       {/* ── LEFT: dark themed panel ── */}
       <div className="hidden lg:flex lg:w-[52%] relative bg-[#050d1a] flex-col items-center justify-center overflow-hidden select-none">
+        <Link 
+          href="/" 
+          className="absolute top-8 left-8 z-20 flex items-center justify-center w-10 h-10 rounded-full bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-colors backdrop-blur-sm"
+          title="Back to Home"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </Link>
         <NetworkCanvas />
 
         {/* Radial glow */}
@@ -171,12 +178,22 @@ export default function Login() {
       <div className="flex-1 bg-white flex items-center justify-center px-8 py-10 overflow-y-auto">
         <div className="w-full max-w-md">
 
-          {/* Mobile logo */}
-          <div className="flex lg:hidden items-center gap-2 mb-8">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center">
-              <ShieldCheck className="w-5 h-5 text-white" />
+          {/* Mobile logo and back button */}
+          <div className="flex lg:hidden items-center justify-between mb-8">
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center">
+                <ShieldCheck className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-lg font-bold text-slate-900">JobCheck <span className="text-emerald-500">AI</span></span>
             </div>
-            <span className="text-lg font-bold text-slate-900">JobCheck <span className="text-emerald-500">AI</span></span>
+            
+            <Link 
+              href="/" 
+              className="p-2 rounded-full bg-slate-50 border border-slate-100 text-slate-500 hover:text-emerald-600 hover:bg-slate-100 transition-colors"
+              title="Back to Home"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Link>
           </div>
 
           <h2 className="text-3xl font-bold text-slate-900 mb-1">

@@ -4,10 +4,11 @@ import { useState } from "react";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { AnimatedSection } from "@/components/AnimatedSection";
-import { ShieldCheck, Loader2, AlertTriangle, CheckCircle, Search, HelpCircle, Brain } from "lucide-react";
+import { ShieldCheck, Loader2, AlertTriangle, CheckCircle, Search, HelpCircle, Brain, Flag } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface PredictionResult {
+  post_id: number | null;
   risk: string;
   label: string;
   confidence: number;
@@ -18,7 +19,7 @@ interface PredictionResult {
 
 export default function Predict() {
   const { user } = useAuth();
-  
+
   const [jobText, setJobText] = useState("");
   const [company, setCompany] = useState("");
   const [location, setLocation] = useState("");
@@ -31,6 +32,9 @@ export default function Predict() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<PredictionResult | null>(null);
+  const [flagging, setFlagging] = useState(false);
+  const [flagged, setFlagged] = useState(false);
+  const [flagError, setFlagError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,11 +67,34 @@ export default function Predict() {
         user_email: user?.email || "",
       });
       setResult(data);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setFlagged(false);
+      setFlagError("");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.response?.data?.detail || "An error occurred during scanning");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFlag = async () => {
+    if (!result?.post_id) {
+      setFlagError("You must be logged in to flag a post.");
+      return;
+    }
+    setFlagging(true);
+    setFlagError("");
+    try {
+      await api.post("/flag", {
+        post_id: result.post_id,
+        reason: "Manually flagged by user",
+      });
+      setFlagged(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      setFlagError(err.response?.data?.detail || "Failed to flag post.");
+    } finally {
+      setFlagging(false);
     }
   };
 
@@ -90,7 +117,7 @@ export default function Predict() {
   };
 
   return (
-    <div className="min-h-[85vh] pt-16 py-10 px-4 sm:px-6 lg:px-8 relative">
+    <div className="min-h-[85vh] pt-24 py-10 px-4 sm:px-6 lg:px-8 relative">
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/10 blur-[150px] rounded-full pointer-events-none" />
 
       <div className="max-w-6xl mx-auto">
@@ -102,12 +129,12 @@ export default function Predict() {
         </AnimatedSection>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
+
           {/* Input Form */}
           <AnimatedSection direction="left" className="lg:col-span-7">
             <div className="glass-card p-6 md:p-8 bg-white/50 border-slate-200">
               <form onSubmit={handleSubmit} className="space-y-6">
-                
+
                 {error && (
                   <div className="p-4 text-red-400 bg-red-400/10 border border-red-500/20 rounded-xl flex items-start gap-3">
                     <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
@@ -225,7 +252,7 @@ export default function Predict() {
                     <ShieldCheck className="w-4 h-4 text-emerald-500" />
                     Analyzed securely locally
                   </span>
-                  
+
                   <button
                     type="submit"
                     disabled={loading || !jobText.trim()}
@@ -246,118 +273,145 @@ export default function Predict() {
           <div className="lg:col-span-5">
             <AnimatePresence mode="wait">
               {loading ? (
-                  <motion.div
-                    key="loading"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="glass-card h-full min-h-[400px] flex flex-col items-center justify-center p-8 text-center bg-white/50 border-slate-200"
-                  >
-                    <div className="relative w-24 h-24 mb-6">
-                      <div className="absolute inset-0 rounded-full border-4 border-emerald-100" />
-                      <div className="absolute inset-0 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin" />
-                      <Brain className="absolute inset-0 m-auto w-8 h-8 text-emerald-500 animate-pulse" />
-                    </div>
-                    <h3 className="text-xl font-bold mb-2 text-slate-900">Analyzing Semantics...</h3>
-                    <p className="text-slate-600 text-sm">Evaluating risk factors and trust markers against our models.</p>
-                  </motion.div>
-                ) : result ? (
-                  <motion.div
-                    key="result"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, type: "spring" }}
-                    className="glass-card shadow-2xl relative overflow-hidden bg-white/80 border-slate-200"
-                  >
-                    {/* Subtle background glow based on result */}
-                    <div className={`absolute top-0 right-0 w-64 h-64 blur-[100px] rounded-full pointer-events-none opacity-30 ${result.risk === 'high' ? 'bg-red-400' : result.risk === 'low' ? 'bg-green-400' : 'bg-yellow-400'}`} />
-                    
-                    <div className="relative z-10">
-                      <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
-                        <h2 className="text-2xl font-bold text-slate-900">Analysis Output</h2>
-                        <div className={`px-4 py-1.5 rounded-full border text-sm font-bold uppercase tracking-wider flex items-center gap-2 ${getRiskColor(result.risk)}`}>
-                          {getRiskIcon(result.risk)}
-                          {result.risk} RISK
-                        </div>
+                <motion.div
+                  key="loading"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="glass-card h-full min-h-[400px] flex flex-col items-center justify-center p-8 text-center bg-white/50 border-slate-200"
+                >
+                  <div className="relative w-24 h-24 mb-6">
+                    <div className="absolute inset-0 rounded-full border-4 border-emerald-100" />
+                    <div className="absolute inset-0 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin" />
+                    <Brain className="absolute inset-0 m-auto w-8 h-8 text-emerald-500 animate-pulse" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2 text-slate-900">Analyzing Semantics...</h3>
+                  <p className="text-slate-600 text-sm">Evaluating risk factors and trust markers against our models.</p>
+                </motion.div>
+              ) : result ? (
+                <motion.div
+                  key="result"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, type: "spring" }}
+                  className="glass-card shadow-2xl relative overflow-hidden bg-white/80 border-slate-200"
+                >
+                  {/* Subtle background glow based on result */}
+                  <div className={`absolute top-0 right-0 w-64 h-64 blur-[100px] rounded-full pointer-events-none opacity-30 ${result.risk === 'high' ? 'bg-red-400' : result.risk === 'low' ? 'bg-green-400' : 'bg-yellow-400'}`} />
+
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
+                      <h2 className="text-2xl font-bold text-slate-900">Analysis Output</h2>
+                      <div className={`px-4 py-1.5 rounded-full border text-sm font-bold uppercase tracking-wider flex items-center gap-2 ${getRiskColor(result.risk)}`}>
+                        {getRiskIcon(result.risk)}
+                        {result.risk} RISK
                       </div>
-  
-                      <div className="flex justify-center mb-10 pt-4">
-                        <div className="relative w-48 h-48 rounded-full flex items-center justify-center bg-white shadow-inner">
-                          {/* Fake circular progress */}
-                          <svg className="absolute inset-0 w-full h-full -rotate-90">
-                            <circle
-                              cx="88" cy="88" r="88"
-                              className="stroke-current text-slate-100 fill-none" strokeWidth="8"
-                              transform="translate(8,8)"
-                            />
+                    </div>
+
+                    <div className="flex justify-center mb-10 pt-4">
+                      <div className="relative w-48 h-48 rounded-full flex items-center justify-center bg-white shadow-inner">
+                        {/* Fake circular progress */}
+                        <svg className="absolute inset-0 w-full h-full -rotate-90">
+                          <circle
+                            cx="88" cy="88" r="88"
+                            className="stroke-current text-slate-100 fill-none" strokeWidth="8"
+                            transform="translate(8,8)"
+                          />
                           <motion.circle
                             initial={{ strokeDashoffset: 553 }}
                             animate={{ strokeDashoffset: 553 - (553 * result.confidence) / 100 }}
                             transition={{ duration: 1.5, ease: "easeOut" }}
                             strokeDasharray="553"
                             cx="88" cy="88" r="88"
-                            className={`stroke-current fill-none ${result.label === 'FAKE' ? 'text-red-500' : 'text-green-500'}`} 
+                            className={`stroke-current fill-none ${result.label === 'FAKE' ? 'text-red-500' : 'text-green-500'}`}
                             strokeWidth="8"
                             strokeLinecap="round"
                             transform="translate(8,8)"
                           />
                         </svg>
                         <div className="text-center z-10">
-                            <div className={`flex items-baseline justify-center font-extrabold ${result.label === 'FAKE' ? 'text-red-600' : 'text-green-600'}`}>
-                              <span className="text-5xl">{Math.round(result.confidence)}</span>
-                              <span className="text-2xl ml-1">%</span>
-                            </div>
-                            <div className="text-sm text-slate-500 mt-1 uppercase tracking-wide font-medium">
-                              {result.label}
-                            </div>
+                          <div className={`flex items-baseline justify-center font-extrabold ${result.label === 'FAKE' ? 'text-red-600' : 'text-green-600'}`}>
+                            <span className="text-5xl">{Math.round(result.confidence)}</span>
+                            <span className="text-2xl ml-1">%</span>
+                          </div>
+                          <div className="text-sm text-slate-500 mt-1 uppercase tracking-wide font-medium">
+                            {result.label}
                           </div>
                         </div>
                       </div>
-  
-                      <div className="space-y-6">
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-slate-600">Authenticity Score</span>
-                          <span className="font-mono font-bold text-green-600">{result.real_prob}%</span>
-                        </div>
-                        
-                        <div className="h-px bg-slate-200 w-full" />
-                        
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-slate-600">Suspicious Score</span>
-                          <span className="font-mono font-bold text-red-600">{result.fake_prob}%</span>
-                        </div>
-  
-                        {result.highlight_words?.length > 0 && (
-                          <div className="mt-8 pt-6 border-t border-slate-200">
-                            <h4 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
-                              <AlertTriangle className="w-4 h-4 text-yellow-500" />
-                              Detected High-Risk Triggers
-                            </h4>
-                            <div className="flex flex-wrap gap-2">
-                              {result.highlight_words.map((word: string, i: number) => (
-                                <span key={i} className="px-3 py-1 bg-red-50 text-red-600 border border-red-100 rounded-full text-xs font-mono">
-                                  {word}
-                                </span>
-                              ))}
-                            </div>
+                    </div>
+
+                    <div className="space-y-6">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-slate-600">Authenticity Score</span>
+                        <span className="font-mono font-bold text-green-600">{result.real_prob}%</span>
+                      </div>
+
+                      <div className="h-px bg-slate-200 w-full" />
+
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-slate-600">Suspicious Score</span>
+                        <span className="font-mono font-bold text-red-600">{result.fake_prob}%</span>
+                      </div>
+
+                      {result.highlight_words?.length > 0 && (
+                        <div className="mt-8 pt-6 border-t border-slate-200">
+                          <h4 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                            <AlertTriangle className="w-4 h-4 text-yellow-500" />
+                            Detected High-Risk Triggers
+                          </h4>
+                          <div className="flex flex-wrap gap-2">
+                            {result.highlight_words.map((word: string, i: number) => (
+                              <span key={i} className="px-3 py-1 bg-red-50 text-red-600 border border-red-100 rounded-full text-xs font-mono">
+                                {word}
+                              </span>
+                            ))}
                           </div>
+                        </div>
+                      )}
+
+                      {/* ── Flag this Post ── */}
+                      <div className="mt-6 pt-5 border-t border-slate-200">
+                        {flagged ? (
+                          <div className="flex items-center gap-2 justify-center px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm font-medium">
+                            <Flag className="w-4 h-4 fill-amber-500 text-amber-500" />
+                            Post flagged — visible in Admin Dashboard
+                          </div>
+                        ) : (
+                          <button
+                            onClick={handleFlag}
+                            disabled={flagging || !result.post_id}
+                            title={!result.post_id ? "Login required to flag posts" : ""}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 hover:border-red-300 transition-all text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {flagging ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Flag className="w-4 h-4" />
+                            )}
+                            {flagging ? "Flagging…" : "Flag this Post"}
+                          </button>
+                        )}
+                        {flagError && (
+                          <p className="mt-2 text-xs text-red-500 text-center">{flagError}</p>
                         )}
                       </div>
                     </div>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="empty"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="glass-card h-full min-h-[400px] flex flex-col items-center justify-center p-8 text-center bg-white/50 border-slate-200"
-                  >
-                    <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mb-6 text-slate-400">
-                      <Search className="w-10 h-10" />
-                    </div>
-                    <h3 className="text-xl font-semibold mb-2 text-slate-900">Awaiting Input</h3>
-                    <p className="text-slate-500 text-sm max-w-xs">Submit a job description on the left to view the AI analysis dashboard here.</p>
-                  </motion.div>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="empty"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="glass-card h-full min-h-[400px] flex flex-col items-center justify-center p-8 text-center bg-white/50 border-slate-200"
+                >
+                  <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mb-6 text-slate-400">
+                    <Search className="w-10 h-10" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2 text-slate-900">Awaiting Input</h3>
+                  <p className="text-slate-500 text-sm max-w-xs">Submit a job description on the left to view the AI analysis dashboard here.</p>
+                </motion.div>
               )}
             </AnimatePresence>
           </div>

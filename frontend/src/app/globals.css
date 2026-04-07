@@ -96,25 +96,59 @@ html.dark body {
 
 /* ─── Dark mode global content overrides ─── */
 
-/* Text: make dark text light */
+/* ── Text: make dark text readable on dark backgrounds ── */
 html.dark .text-slate-900  { color: #f1f5f9 !important; }
 html.dark .text-slate-800  { color: #e2e8f0 !important; }
 html.dark .text-slate-700  { color: #cbd5e1 !important; }
 html.dark .text-slate-600  { color: #94a3b8 !important; }
 html.dark .text-slate-500  { color: #64748b !important; }
+html.dark .text-slate-400  { color: #475569 !important; }
 
-/* White / light backgrounds → dark surfaces */
+/* ── White / light backgrounds → dark surfaces ── */
 html.dark .bg-white              { background-color: #1e2d45 !important; }
 html.dark .bg-slate-50           { background-color: #152236 !important; }
 html.dark .bg-slate-100          { background-color: #1e2d45 !important; }
 html.dark .bg-slate-200          { background-color: #263652 !important; }
 
-/* Borders */
-html.dark .border-slate-100      { border-color: #263652 !important; }
+/* ── Semi-transparent white cards (hero floating cards, feature cards, mockup) ── */
+html.dark .bg-white\/80          { background-color: rgba(30, 45, 69, 0.85) !important; }
+html.dark .bg-white\/70          { background-color: rgba(30, 45, 69, 0.75) !important; }
+html.dark .bg-white\/60          { background-color: rgba(30, 45, 69, 0.65) !important; }
+html.dark .bg-white\/50          { background-color: rgba(30, 45, 69, 0.55) !important; }
+html.dark .bg-white\/30          { background-color: rgba(30, 45, 69, 0.35) !important; }
+
+/* ── Icon pill backgrounds inside cards ── */
+html.dark .bg-emerald-50         { background-color: rgba(16, 185, 129, 0.15) !important; }
+html.dark .bg-red-50             { background-color: rgba(239, 68, 68, 0.15) !important; }
+html.dark .bg-blue-50            { background-color: rgba(59, 130, 246, 0.15) !important; }
+html.dark .bg-purple-50          { background-color: rgba(168, 85, 247, 0.15) !important; }
+html.dark .bg-pink-50            { background-color: rgba(236, 72, 153, 0.15) !important; }
+html.dark .bg-yellow-50          { background-color: rgba(234, 179, 8, 0.15) !important; }
+html.dark .bg-cyan-50            { background-color: rgba(6, 182, 212, 0.15) !important; }
+
+/* ── Borders ── */
+html.dark .border-slate-100      { border-color: #1e3a5c !important; }
 html.dark .border-slate-200      { border-color: #263652 !important; }
 html.dark .border-slate-300      { border-color: #2e4060 !important; }
 
-/* Input / textarea / select */
+/* ── Dashboard mockup inner elements ── */
+html.dark .bg-slate-100.rounded  { background-color: #263652 !important; }
+
+/* ── Navbar: Log In ghost button ── */
+html.dark nav a.bg-white\/70,
+html.dark nav a[href="/login"]:not([class*="gradient"]) {
+  background-color: rgba(30, 45, 69, 0.7) !important;
+  color: #e2e8f0 !important;
+  border-color: #2e4060 !important;
+}
+
+/* ── Footer headings ── */
+html.dark footer h3 { color: #e2e8f0 !important; }
+html.dark footer p, html.dark footer li, html.dark footer a { color: #94a3b8 !important; }
+html.dark footer a:hover { color: #34d399 !important; }
+html.dark footer .border-t { border-color: #263652 !important; }
+
+/* ── Input / textarea / select ── */
 html.dark input,
 html.dark textarea,
 html.dark select {
@@ -127,7 +161,96 @@ html.dark textarea::placeholder {
   color: #64748b !important;
 }
 
-/* Dark scrollbar */
+/* ── Section: border-y divider ── */
+html.dark .border-y              { border-color: #1e3a5c !important; }
+
+/* ── CTA section gradient overlay ── */
+html.dark .to-emerald-50\/50     { --tw-gradient-to: rgba(6, 78, 59, 0.15) !important; }
+
+/* ── Dark scrollbar ── */
 html.dark ::-webkit-scrollbar-track  { background: #0d1b2e; }
 html.dark ::-webkit-scrollbar-thumb  { background: #263652; }
 html.dark ::-webkit-scrollbar-thumb:hover { background: #2e4060; }
+
+/* ═══════════════════════════════════════
+   Admin Dashboard — Cursor Highlight FX
+   ═══════════════════════════════════════ */
+
+/* ── Every card / panel on the admin page ── */
+.admin-highlight,
+[class*="rounded-2xl"][class*="bg-white"][class*="border"] {
+  transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+[class*="rounded-2xl"][class*="bg-white"][class*="border"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(16, 185, 129, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+/* ── Table rows ── */
+table tbody tr {
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+table tbody tr:hover {
+  background-color: rgba(16, 185, 129, 0.04) !important;
+  box-shadow: inset 3px 0 0 0 #10b981;
+}
+
+/* ── Sidebar nav items ── */
+nav button,
+aside button {
+  transition: all 0.2s ease;
+}
+
+/* ── Activity feed items ── */
+[class*="rounded-xl"][class*="bg-slate-50"] {
+  transition: all 0.2s ease;
+}
+
+[class*="rounded-xl"][class*="bg-slate-50"]:hover {
+  background-color: #e2e8f0 !important;
+  transform: translateX(3px);
+  box-shadow: -3px 0 0 0 #10b981;
+}
+
+/* ── Metric cards — extra lift ── */
+[class*="rounded-2xl"][class*="shadow-sm"]:hover .text-3xl {
+  transform: scale(1.03);
+  transition: transform 0.2s ease;
+}
+
+/* ── Bar chart bars — glow on hover ── */
+.recharts-bar-rectangle:hover {
+  filter: brightness(1.15);
+  transition: filter 0.2s ease;
+}
+
+/* ── Keyword progress bars — expand on hover ── */
+[class*="h-2"][class*="bg-slate-100"] {
+  transition: all 0.2s ease;
+}
+
+[class*="group"]:hover [class*="h-2"][class*="bg-slate-100"] {
+  height: 10px;
+}
+
+/* ── Buttons — subtle glow ── */
+button:hover:not(:disabled) {
+  transition: all 0.2s ease;
+}
+
+/* ── Dark mode overrides for highlights ── */
+html.dark [class*="rounded-2xl"][class*="border"]:hover {
+  box-shadow: 0 8px 30px rgba(52, 211, 153, 0.1), 0 2px 8px rgba(0, 0, 0, 0.2);
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+html.dark table tbody tr:hover {
+  background-color: rgba(52, 211, 153, 0.06) !important;
+}
+
+html.dark [class*="rounded-xl"][class*="bg-slate-50"]:hover {
+  background-color: #1e2d45 !important;
+}

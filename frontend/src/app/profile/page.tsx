@@ -23,7 +23,7 @@ interface Profile {
 }
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -94,6 +94,7 @@ export default function ProfilePage() {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setPicPreview(`http://localhost:8000${res.data.profile_pic}`);
+      await refreshUser();
       setSuccess("Profile picture updated!");
       setTimeout(() => setSuccess(""), 3000);
     } catch {
@@ -116,7 +117,7 @@ export default function ProfilePage() {
   const initials = profile.username.slice(0, 2).toUpperCase();
 
   return (
-    <div className="min-h-screen pt-16 py-10 px-4">
+    <div className="min-h-screen pt-24 py-10 px-4">
       <div className="max-w-3xl mx-auto">
 
         {/* Header */}

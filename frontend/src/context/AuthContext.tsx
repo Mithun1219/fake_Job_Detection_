@@ -8,6 +8,7 @@ interface User {
   email: string;
   role: string;
   username: string;
+  profile_pic?: string;
 }
 
 interface AuthContextType {
@@ -15,6 +16,7 @@ interface AuthContextType {
   loading: boolean;
   login: (token: string, userData: User) => void;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,24 +25,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchUser = useCallback(async () => {
+    const token = Cookies.get("token");
+    if (!token) return;
+    try {
+      const res = await api.get("/me");
+      setUser(res.data);
+    } catch (error) {
+      console.error("Token verification failed", error);
+      Cookies.remove("token");
+      setUser(null);
+    }
+  }, []);
+
   useEffect(() => {
     const checkAuth = async () => {
-      const token = Cookies.get("token");
-      if (token) {
-        try {
-          // Request current user profile using the token
-          const res = await api.get("/me");
-          setUser(res.data);
-        } catch (error) {
-          console.error("Token verification failed", error);
-          Cookies.remove("token");
-        }
-      }
+      await fetchUser();
       setLoading(false);
     };
-
     checkAuth();
-  }, []);
+  }, [fetchUser]);
 
   const login = useCallback((token: string, userData: User) => {
     Cookies.set("token", token, { expires: 1 }); // 1 day
@@ -53,8 +57,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.location.href = "/login";
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    await fetchUser();
+  }, [fetchUser]);
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

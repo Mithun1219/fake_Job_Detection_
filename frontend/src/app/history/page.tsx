@@ -44,7 +44,7 @@ export default function History() {
   };
 
   return (
-    <div className="min-h-[85vh] pt-16 py-10 px-4 sm:px-6 lg:px-8 relative">
+    <div className="min-h-[85vh] pt-24 py-10 px-4 sm:px-6 lg:px-8 relative">
       <div className="max-w-5xl mx-auto">
         
         <AnimatedSection className="mb-10 flex items-center justify-between">

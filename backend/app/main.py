@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
-from database import get_connection
+from .database import get_connection
 from jose import JWTError, jwt
 import bcrypt
 import joblib
@@ -446,10 +446,23 @@ def get_me(credentials: HTTPAuthorizationCredentials = Depends(security)):
         raise HTTPException(status_code=401, detail="Not authenticated")
     try:
         payload = decode_token(credentials.credentials)
+        # Fetch profile_pic from DB
+        profile_pic = ""
+        try:
+            conn = get_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT profile_pic FROM user WHERE email = ?", (payload["email"],))
+            row = cursor.fetchone()
+            if row and row["profile_pic"]:
+                profile_pic = row["profile_pic"]
+            conn.close()
+        except Exception:
+            pass
         return {
             "email": payload["email"],
             "role": payload["role"],
-            "username": payload["username"]
+            "username": payload["username"],
+            "profile_pic": profile_pic
         }
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
@@ -645,6 +658,17 @@ def admin_stats():
         cursor.execute("SELECT COUNT(*) as `real` FROM predictionresult WHERE label = 'REAL'")
         real = cursor.fetchone()["real"]
 
+        cursor.execute("SELECT COUNT(*) as cnt FROM user")
+        user_count = cursor.fetchone()["cnt"]
+
+        cursor.execute("SELECT COUNT(*) as cnt FROM flaggedpost")
+        flagged_count = cursor.fetchone()["cnt"]
+
+        cursor.execute("SELECT COUNT(*) as cnt FROM flaggedpost WHERE reviewed = 0")
+        pending_review = cursor.fetchone()["cnt"]
+
+        fake_pct = round((fake / total * 100), 1) if total > 0 else 0
+
         cursor.execute("""
             SELECT
                 f.flag_id,
@@ -668,9 +692,250 @@ def admin_stats():
             "fake": fake,
             "real": real,
             "accuracy": 94.0,
+            "user_count": user_count,
+            "flagged_count": flagged_count,
+            "pending_review": pending_review,
+            "fake_percent": fake_pct,
             "flagged_posts": flagged
         }
 
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# ─────────────────────────────────────────
+# Admin — User Distribution (donut chart)
+# ─────────────────────────────────────────
+@app.get("/admin/user-distribution")
+def admin_user_distribution():
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT role, COUNT(*) as count FROM user GROUP BY role")
+        rows = cursor.fetchall()
+        conn.close()
+        return [{"name": row["role"].capitalize(), "value": row["count"]} for row in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────
+# Admin — Prediction Trends (grouped bar)
+# ─────────────────────────────────────────
+@app.get("/admin/prediction-trends")
+def admin_prediction_trends():
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT DATE(predicted_time) as date,
+                   COUNT(*) as total,
+                   SUM(CASE WHEN label = 'FAKE' THEN 1 ELSE 0 END) as fake
+            FROM predictionresult
+            WHERE predicted_time >= date('now', '-30 day')
+            GROUP BY DATE(predicted_time)
+            ORDER BY date ASC
+        """)
+        rows = cursor.fetchall()
+        conn.close()
+
+        formatted = []
+        for row in rows:
+            try:
+                dt = datetime.datetime.strptime(row["date"], "%Y-%m-%d")
+                date_str = dt.strftime("%b %d")
+            except:
+                date_str = row["date"]
+            formatted.append({
+                "date": date_str,
+                "total": row["total"],
+                "fake": row["fake"],
+            })
+        return formatted
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────
+# Admin — Recent Activity Feed
+# ─────────────────────────────────────────
+@app.get("/admin/recent-activity")
+def admin_recent_activity():
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT
+                j.post_id,
+                u.email   AS user_email,
+                p.label,
+                p.confidence_score,
+                j.submission_time,
+                SUBSTR(j.job_text, 1, 120) AS preview
+            FROM jobpostsubmission j
+            JOIN predictionresult  p ON j.post_id = p.post_id
+            LEFT JOIN user         u ON j.user_id  = u.user_id
+            ORDER BY j.submission_time DESC
+            LIMIT 20
+        """)
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────
+# Admin — List all users
+# ─────────────────────────────────────────
+@app.get("/admin/users")
+def admin_users():
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT user_id AS id, username, email, role, '' AS created_at
+            FROM user
+            ORDER BY user_id DESC
+        """)
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────
+# Admin — Change user role
+# ─────────────────────────────────────────
+class RoleUpdateRequest(BaseModel):
+    role: str
+
+@app.put("/admin/users/{user_id}/role")
+def admin_update_role(user_id: int, data: RoleUpdateRequest):
+    try:
+        if data.role not in ("admin", "user"):
+            raise HTTPException(status_code=400, detail="Role must be 'admin' or 'user'")
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE user SET role = ? WHERE user_id = ?", (data.role, user_id))
+        conn.commit()
+        conn.close()
+        return {"message": "Role updated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────
+# Admin — Flagged posts list
+# ─────────────────────────────────────────
+@app.get("/admin/flagged")
+def admin_flagged():
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT
+                j.post_id,
+                j.job_text,
+                p.label,
+                p.confidence_score,
+                j.submission_time,
+                u.email AS user_email,
+                COALESCE(f.reviewed, 0) AS reviewed
+            FROM flaggedpost f
+            JOIN jobpostsubmission j ON f.post_id  = j.post_id
+            JOIN predictionresult  p ON j.post_id  = p.post_id
+            LEFT JOIN user         u ON j.user_id  = u.user_id
+            ORDER BY j.submission_time DESC
+            LIMIT 50
+        """)
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────
+# Admin — Mark flagged post as reviewed
+# ─────────────────────────────────────────
+@app.put("/admin/flagged/{post_id}/review")
+def admin_review_flagged(post_id: int):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        # Upsert: if a flaggedpost row exists update it, otherwise insert
+        cursor.execute("SELECT flag_id FROM flaggedpost WHERE post_id = ?", (post_id,))
+        existing = cursor.fetchone()
+        if existing:
+            cursor.execute("UPDATE flaggedpost SET reviewed = 1 WHERE post_id = ?", (post_id,))
+        else:
+            cursor.execute(
+                "INSERT INTO flaggedpost (post_id, reason, flagged_time, reviewed) VALUES (?, ?, ?, ?)",
+                (post_id, "admin_review", datetime.datetime.now(), 1)
+            )
+        conn.commit()
+        conn.close()
+        return {"message": "Post marked as reviewed"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────
+# Admin — Delete flagged post
+# ─────────────────────────────────────────
+@app.delete("/admin/flagged/{post_id}")
+def admin_delete_flagged(post_id: int):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM flaggedpost       WHERE post_id = ?", (post_id,))
+        cursor.execute("DELETE FROM predictionresult  WHERE post_id = ?", (post_id,))
+        cursor.execute("DELETE FROM jobpostsubmission WHERE post_id = ?", (post_id,))
+        conn.commit()
+        conn.close()
+        return {"message": "Post deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────
+# Admin — Keyword / threat statistics
+# ─────────────────────────────────────────
+SCAM_KEYWORDS = [
+    "work from home", "no experience needed", "guaranteed income",
+    "registration fee", "urgent hiring", "earn per day",
+    "send bank details", "100% genuine", "unlimited earnings",
+    "investment required",
+]
+
+@app.get("/admin/keyword-stats")
+def admin_keyword_stats():
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT j.job_text FROM jobpostsubmission j
+            JOIN predictionresult p ON j.post_id = p.post_id
+            WHERE p.label = 'FAKE'
+        """)
+        rows = cursor.fetchall()
+        conn.close()
+
+        counts = {kw: 0 for kw in SCAM_KEYWORDS}
+        for row in rows:
+            text = (row["job_text"] or "").lower()
+            for kw in SCAM_KEYWORDS:
+                if kw in text:
+                    counts[kw] += 1
+
+        result = [{"keyword": k, "count": v} for k, v in counts.items() if v > 0]
+        result.sort(key=lambda x: x["count"], reverse=True)
+        return result if result else [{"keyword": kw, "count": 0} for kw in SCAM_KEYWORDS[:5]]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -686,9 +951,12 @@ def admin_daily_stats():
         conn = get_connection()
         cursor = conn.cursor()
 
-        # Get count of predictions grouped by date (last 7 days)
+        # Get count of predictions grouped by date and label (last 7 days)
         cursor.execute("""
-            SELECT DATE(predicted_time) as date, COUNT(*) as count
+            SELECT DATE(predicted_time) as date,
+                   COUNT(*) as total,
+                   SUM(CASE WHEN label = 'FAKE' THEN 1 ELSE 0 END) as fake,
+                   SUM(CASE WHEN label = 'REAL' THEN 1 ELSE 0 END) as real
             FROM predictionresult
             WHERE predicted_time >= date('now', '-7 day')
             GROUP BY DATE(predicted_time)
@@ -708,7 +976,9 @@ def admin_daily_stats():
                 date_str = row["date"]
             formatted_data.append({
                 "date": date_str,
-                "requests": row["count"]
+                "requests": row["total"],
+                "fake": row["fake"],
+                "real": row["real"],
             })
 
         return formatted_data
